@@ -14,18 +14,15 @@ import android.os.Parcelable;
 import android.support.annotation.NonNull;
 import android.support.v4.view.MotionEventCompat;
 import android.support.v4.view.ViewCompat;
-import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityEvent;
-import android.widget.ListView;
-import android.widget.ScrollView;
 
-import com.nineoldandroids.view.animation.AnimatorProxy;
-import com.sothree.slidinguppanel.library.R;
+import com.ridewithgps.mobile.R;
+
 
 public class SlidingUpPanelLayout extends ViewGroup {
 
@@ -114,6 +111,11 @@ public class SlidingUpPanelLayout extends ViewGroup {
      * Paralax offset
      */
     private int mParallaxOffset = -1;
+
+    /**
+     * The Anchor Point in pixels
+     */
+    private int mAnchorDimension = -1;
 
     /**
      * True if the collapsed panel should be dragged up.
@@ -321,6 +323,7 @@ public class SlidingUpPanelLayout extends ViewGroup {
                 mPanelHeight = ta.getDimensionPixelSize(R.styleable.SlidingUpPanelLayout_umanoPanelHeight, -1);
                 mShadowHeight = ta.getDimensionPixelSize(R.styleable.SlidingUpPanelLayout_umanoShadowHeight, -1);
                 mParallaxOffset = ta.getDimensionPixelSize(R.styleable.SlidingUpPanelLayout_umanoParalaxOffset, -1);
+                mAnchorDimension = ta.getDimensionPixelSize(R.styleable.SlidingUpPanelLayout_umanoAnchorSize, -1);
 
                 mMinFlingVelocity = ta.getInt(R.styleable.SlidingUpPanelLayout_umanoFlingVelocity, DEFAULT_MIN_FLING_VELOCITY);
                 mCoveredFadeColor = ta.getColor(R.styleable.SlidingUpPanelLayout_umanoFadeColor, DEFAULT_FADE_COLOR);
@@ -539,18 +542,13 @@ public class SlidingUpPanelLayout extends ViewGroup {
                 @Override
                 public void onClick(View v) {
                     if (!isEnabled() || !isTouchEnabled()) return;
-                    if (mSlideState != PanelState.EXPANDED && mSlideState != PanelState.ANCHORED) {
-                        if (mAnchorPoint < 1.0f) {
-                            setPanelState(PanelState.ANCHORED);
-                        } else {
-                            setPanelState(PanelState.EXPANDED);
-                        }
+                    if (mSlideState != PanelState.EXPANDED && mSlideState != PanelState.COLLAPSED) {
+                        setPanelState(PanelState.EXPANDED);
                     } else {
-                        setPanelState(PanelState.COLLAPSED);
+                        setPanelState(PanelState.ANCHORED);
                     }
                 }
             });
-            ;
         }
     }
 
@@ -801,6 +799,10 @@ public class SlidingUpPanelLayout extends ViewGroup {
 
             if (child == mSlideableView) {
                 mSlideRange = mSlideableView.getMeasuredHeight() - mPanelHeight;
+                if (mAnchorPoint == 1.0f && mAnchorDimension > -1) {
+                    mAnchorPoint = 1.0f - ((mSlideableView.getMeasuredHeight() - mAnchorDimension) / (float) mSlideRange);
+                }
+
             }
         }
 
@@ -1035,42 +1037,43 @@ public class SlidingUpPanelLayout extends ViewGroup {
     }
 
     private int getScrollableViewScrollPosition() {
-        if (mScrollableView == null) return 0;
-        if (mScrollableView instanceof ScrollView) {
-            if (mIsSlidingUp) {
-                return mScrollableView.getScrollY();
-            } else {
-                ScrollView sv = ((ScrollView) mScrollableView);
-                View child = sv.getChildAt(0);
-                return (child.getBottom() - (sv.getHeight() + sv.getScrollY()));
-            }
-        } else if (mScrollableView instanceof ListView && ((ListView) mScrollableView).getChildCount() > 0) {
-            ListView lv = ((ListView) mScrollableView);
-            if (lv.getAdapter() == null) return 0;
-            if (mIsSlidingUp) {
-                View firstChild = lv.getChildAt(0);
-                // Approximate the scroll position based on the top child and the first visible item
-                return lv.getFirstVisiblePosition() * firstChild.getHeight() - firstChild.getTop();
-            } else {
-                View lastChild = lv.getChildAt(lv.getChildCount() - 1);
-                // Approximate the scroll position based on the bottom child and the last visible item
-                return (lv.getAdapter().getCount() - lv.getLastVisiblePosition() - 1) * lastChild.getHeight() + lastChild.getBottom() - lv.getBottom();
-            }
-        } else if (mScrollableView instanceof RecyclerView && ((RecyclerView) mScrollableView).getChildCount() > 0) {
-            RecyclerView rv = ((RecyclerView) mScrollableView);
-            if (rv.getAdapter() == null) return 0;
-            if (mIsSlidingUp) {
-                View firstChild = rv.getChildAt(0);
-                // Approximate the scroll position based on the top child and the first visible item
-                return rv.getChildLayoutPosition(firstChild) * firstChild.getHeight() - firstChild.getTop();
-            } else {
-                View lastChild = rv.getChildAt(rv.getChildCount() - 1);
-                // Approximate the scroll position based on the bottom child and the last visible item
-                return (rv.getAdapter().getItemCount() - 1) * lastChild.getHeight() + lastChild.getBottom() - rv.getBottom();
-            }
-        } else {
-            return 0;
-        }
+        return 0;
+//        if (mScrollableView == null) return 0;
+//        if (mScrollableView instanceof ScrollView) {
+//            if (mIsSlidingUp) {
+//                return mScrollableView.getScrollY();
+//            } else {
+//                ScrollView sv = ((ScrollView) mScrollableView);
+//                View child = sv.getChildAt(0);
+//                return (child.getBottom() - (sv.getHeight() + sv.getScrollY()));
+//            }
+//        } else if (mScrollableView instanceof ListView && ((ListView) mScrollableView).getChildCount() > 0) {
+//            ListView lv = ((ListView) mScrollableView);
+//            if (lv.getAdapter() == null) return 0;
+//            if (mIsSlidingUp) {
+//                View firstChild = lv.getChildAt(0);
+//                // Approximate the scroll position based on the top child and the first visible item
+//                return lv.getFirstVisiblePosition() * firstChild.getHeight() - firstChild.getTop();
+//            } else {
+//                View lastChild = lv.getChildAt(lv.getChildCount() - 1);
+//                // Approximate the scroll position based on the bottom child and the last visible item
+//                return (lv.getAdapter().getCount() - lv.getLastVisiblePosition() - 1) * lastChild.getHeight() + lastChild.getBottom() - lv.getBottom();
+//            }
+//        } else if (mScrollableView instanceof RecyclerView && ((RecyclerView) mScrollableView).getChildCount() > 0) {
+//            RecyclerView rv = ((RecyclerView) mScrollableView);
+//            if (rv.getAdapter() == null) return 0;
+//            if (mIsSlidingUp) {
+//                View firstChild = rv.getChildAt(0);
+//                // Approximate the scroll position based on the top child and the first visible item
+//                return rv.getChildLayoutPosition(firstChild) * firstChild.getHeight() - firstChild.getTop();
+//            } else {
+//                View lastChild = rv.getChildAt(rv.getChildCount() - 1);
+//                // Approximate the scroll position based on the bottom child and the last visible item
+//                return (rv.getAdapter().getItemCount() - 1) * lastChild.getHeight() + lastChild.getBottom() - rv.getBottom();
+//            }
+//        } else {
+//            return 0;
+//        }
     }
 
     /*
@@ -1156,9 +1159,10 @@ public class SlidingUpPanelLayout extends ViewGroup {
             int mainViewOffset = getCurrentParalaxOffset();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                 mMainView.setTranslationY(mainViewOffset);
-            } else {
-                AnimatorProxy.wrap(mMainView).setTranslationY(mainViewOffset);
             }
+//            else {
+//                AnimatorProxy.wrap(mMainView).setTranslationY(mainViewOffset);
+//            }
         }
     }
 
@@ -1215,6 +1219,12 @@ public class SlidingUpPanelLayout extends ViewGroup {
                 canvas.drawRect(mTmpRect, mCoveredFadePaint);
             }
         } else {
+
+            canvas.getClipBounds(mTmpRect);
+
+            mTmpRect.top = Math.min(mTmpRect.top, mSlideableView.getTop() - 500);
+            canvas.clipRect(mTmpRect);
+
             result = super.drawChild(canvas, child, drawingTime);
         }
 
